@@ -37,9 +37,10 @@ router.post("/", upload.single("file"), async (req, res) => {
 
         await Document.create({
           filename: req.file.originalname,
+          documentId: req.file.originalname,  // ADD THIS
           content: chunk,
           embedding,
-          pageNumber: i  // ✅ Correct page number
+          pageNumber: i
         });
       }
     }
