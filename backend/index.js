@@ -12,6 +12,7 @@ import authroutes from "./routes/auth.routes.js";
 dotenv.config();
 connectDB();
 
+
 const app = express();
 
 app.use(cors());

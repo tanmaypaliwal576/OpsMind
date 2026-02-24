@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 function Chat() {
+  const navigate = useNavigate();
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -9,6 +12,9 @@ function Chat() {
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // 🔐 Get logged-in user
+  const user = JSON.parse(localStorage.getItem("rag_user"));
 
   /* ============================= */
   /* Auto-scroll */
@@ -23,12 +29,12 @@ function Chat() {
   useEffect(() => {
     const token = localStorage.getItem("rag_token");
     if (!token) {
-      window.location.href = "/login";
+      navigate("/login");
     }
-  }, []);
+  }, [navigate]);
 
   /* ============================= */
-  /* FILE UPLOAD */
+  /* FILE UPLOAD (UNCHANGED) */
   /* ============================= */
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -36,7 +42,7 @@ function Chat() {
 
     const token = localStorage.getItem("rag_token");
     if (!token) {
-      window.location.href = "/login";
+      navigate("/login");
       return;
     }
 
@@ -58,8 +64,8 @@ function Chat() {
       );
 
       if (response.status === 401) {
-        localStorage.removeItem("rag_token");
-        window.location.href = "/login";
+        localStorage.clear();
+        navigate("/login");
         return;
       }
 
@@ -92,14 +98,14 @@ function Chat() {
   };
 
   /* ============================= */
-  /* CHAT STREAM */
+  /* CHAT STREAM (UNCHANGED) */
   /* ============================= */
   const handleAsk = async () => {
     if (!question.trim()) return;
 
     const token = localStorage.getItem("rag_token");
     if (!token) {
-      window.location.href = "/login";
+      navigate("/login");
       return;
     }
 
@@ -124,8 +130,8 @@ function Chat() {
       );
 
       if (response.status === 401) {
-        localStorage.removeItem("rag_token");
-        window.location.href = "/login";
+        localStorage.clear();
+        navigate("/login");
         return;
       }
 
@@ -196,6 +202,17 @@ function Chat() {
         </h1>
 
         <div className="flex items-center gap-4">
+
+          {/* 👑 Analytics Button Only for Admin */}
+          {user?.role === "admin" && (
+            <button
+              onClick={() => navigate("/admin/analytics")}
+              className="text-sm border border-white/20 px-4 py-2 rounded-lg hover:bg-white hover:text-black transition"
+            >
+              Analytics
+            </button>
+          )}
+
           <button
             onClick={() => fileInputRef.current.click()}
             disabled={uploading}
@@ -214,8 +231,8 @@ function Chat() {
 
           <button
             onClick={() => {
-              localStorage.removeItem("rag_token");
-              window.location.href = "/login";
+              localStorage.clear();
+              navigate("/login");
             }}
             className="text-sm text-gray-400 hover:text-white transition"
           >

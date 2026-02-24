@@ -4,6 +4,7 @@ import Document from "../models/Document.js";
 import Conversation from "../models/Conversation.js";
 import { generateEmbedding } from "../services/embedding.service.js";
 import { protect } from "../middlewares/auth.middleware.js";
+
 const router = express.Router();
 
 const ai = new GoogleGenAI({
@@ -11,9 +12,9 @@ const ai = new GoogleGenAI({
 });
 
 
-// =====================================
-// 💬 NON-STREAM CHAT
-// =====================================
+/* ========================================================= */
+/* 💬 NON-STREAM CHAT */
+/* ========================================================= */
 router.post("/", protect, async (req, res) => {
   try {
     const { question } = req.body;
@@ -55,10 +56,25 @@ router.post("/", protect, async (req, res) => {
       return res.json({ answer: "I don't know.", sources: [] });
     }
 
+    /* ================= Unique Sources ================= */
+    const uniqueSources = [
+      ...new Map(
+        results.map(r => [
+          `${r.filename}-${r.pageNumber}`,
+          {
+            filename: r.filename,
+            page: r.pageNumber,
+            similarityScore: r.score
+          }
+        ])
+      ).values()
+    ];
+
+    /* ================= Build Context ================= */
     const context = results
       .map(
         r =>
-          `Filename: ${r.filename}
+`Filename: ${r.filename}
 Page: ${r.pageNumber}
 Content:
 ${r.content}`
@@ -92,38 +108,28 @@ ${question}
       response.candidates?.[0]?.content?.parts?.[0]?.text ||
       "I don't know.";
 
+    /* ================= SAVE CONVERSATION ================= */
     await Conversation.create({
       question,
       answer,
-      confidence: avgScore
+      confidence: avgScore,
+      sources: uniqueSources,
+      user: req.user.id   // ✅ FIXED HERE
     });
 
-    const uniqueSources = [
-      ...new Map(
-        results.map(r => [
-          `${r.filename}-${r.pageNumber}`,
-          {
-            filename: r.filename,
-            page: r.pageNumber,
-            similarityScore: r.score
-          }
-        ])
-      ).values()
-    ];
-
-    res.json({ answer, sources: uniqueSources });
+    return res.json({ answer, sources: uniqueSources });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Chat failed" });
+    return res.status(500).json({ error: "Chat failed" });
   }
 });
 
 
-// =====================================
-// 💬 STREAMING CHAT (SSE)
-// =====================================
-router.post("/stream", async (req, res) => {
+/* ========================================================= */
+/* 💬 STREAMING CHAT (SSE) */
+/* ========================================================= */
+router.post("/stream", protect, async (req, res) => {
   try {
     const { question } = req.body;
 
@@ -172,10 +178,23 @@ router.post("/stream", async (req, res) => {
       return res.end();
     }
 
+    const uniqueSources = [
+      ...new Map(
+        results.map(r => [
+          `${r.filename}-${r.pageNumber}`,
+          {
+            filename: r.filename,
+            page: r.pageNumber,
+            similarityScore: r.score
+          }
+        ])
+      ).values()
+    ];
+
     const context = results
       .map(
         r =>
-          `Filename: ${r.filename}
+`Filename: ${r.filename}
 Page: ${r.pageNumber}
 Content:
 ${r.content}`
@@ -184,14 +203,9 @@ ${r.content}`
 
     const prompt = `
 You are an enterprise academic assistant.
-
-STRICT RULES:
-1. Use ONLY the provided context.
-2. Every factual statement MUST end with citation:
-   (Source: <filename>, Page <pageNumber>)
-3. If answer not clearly found, respond exactly:
-   "I don't know."
-4. Do NOT invent citations.
+Use ONLY the provided context.
+Cite every statement.
+If not found, say "I don't know."
 
 Context:
 ${context}
@@ -215,24 +229,14 @@ ${question}
       }
     }
 
+    /* ================= SAVE CONVERSATION ================= */
     await Conversation.create({
       question,
       answer: fullAnswer,
-      confidence: avgScore
+      confidence: avgScore,
+      sources: uniqueSources,
+      user: req.user.id   // ✅ FIXED HERE
     });
-
-    const uniqueSources = [
-      ...new Map(
-        results.map(r => [
-          `${r.filename}-${r.pageNumber}`,
-          {
-            filename: r.filename,
-            page: r.pageNumber,
-            similarityScore: r.score
-          }
-        ])
-      ).values()
-    ];
 
     res.write(`data: ${JSON.stringify({ done: true, sources: uniqueSources })}\n\n`);
     res.end();
@@ -241,9 +245,6 @@ ${question}
     console.error("Streaming Error:", error);
     res.end();
   }
-
-
-  
 });
 
 export default router;

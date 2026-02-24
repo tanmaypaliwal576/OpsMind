@@ -2,9 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { Toaster } from "react-hot-toast";
 // Importing pages
 import Chat from './pages/Chat';
-import AdminDashboard from './pages/AdminDashboard';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
+import AdminAnalytics from "./pages/AdminAnalytics";
 
 
 const App = () => {
@@ -19,7 +19,7 @@ const App = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/chat" element={<Chat />} />
-      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
     </Routes>
   </Router>
     
