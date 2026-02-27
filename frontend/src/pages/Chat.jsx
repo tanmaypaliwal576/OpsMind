@@ -157,7 +157,7 @@ function Chat() {
 
             for (let i = 0; i < text.length; i++) {
               await new Promise((resolve) => setTimeout(resolve, 8));
-              accumulatedText += text[i];
+              accumulatedText += text[i]; //typewriter effect
 
               setMessages((prev) => {
                 const updated = [...prev];
