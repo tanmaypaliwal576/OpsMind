@@ -12,18 +12,67 @@ const ai = new GoogleGenAI({
 });
 
 /* ========================================================= */
+/* 🧠 HELPER: REWRITE QUESTION INTO STANDALONE FORM */
+/* ========================================================= */
+async function rewriteQuestion(userId, question) {
+  const history = await Conversation.find({ user: userId })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .lean();
+
+  if (!history.length) return question;
+
+  const formattedHistory = history
+    .reverse()
+    .map(h => `User: ${h.question}\nAssistant: ${h.answer}`)
+    .join("\n\n");
+
+  const rewritePrompt = `
+Given the following conversation:
+
+${formattedHistory}
+
+Rewrite the latest question into a fully self-contained standalone question.
+If it is already standalone, return it unchanged.
+
+Latest question:
+${question}
+
+Standalone question:
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: rewritePrompt }] }]
+    });
+
+    const rewritten =
+      response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+    return rewritten || question;
+  } catch (err) {
+    console.error("Rewrite failed:", err);
+    return question;
+  }
+}
+
+/* ========================================================= */
 /* 💬 NON-STREAM CHAT */
 /* ========================================================= */
 router.post("/", protect, async (req, res) => {
   try {
     const { question } = req.body;
 
-    if (!question || question.trim() === "") {
+    if (!question?.trim()) {
       return res.status(400).json({ error: "Question required" });
     }
 
+    /* 🧠 STEP 1: Rewrite Question */
+    const standaloneQuestion = await rewriteQuestion(req.user.id, question);
+
     /* ================= EMBEDDING ================= */
-    const queryEmbedding = await generateEmbedding(question);
+    const queryEmbedding = await generateEmbedding(standaloneQuestion);
     if (!queryEmbedding) {
       return res.json({ answer: "I don't know.", sources: [] });
     }
@@ -49,14 +98,7 @@ router.post("/", protect, async (req, res) => {
       }
     ]);
 
-    if (!results.length) {
-      return res.json({ answer: "I don't know.", sources: [] });
-    }
-
-    const avgScore =
-      results.reduce((sum, r) => sum + r.score, 0) / results.length;
-
-    if (avgScore < 0.72) {
+    if (!results.length || results[0].score < 0.72) {
       return res.json({ answer: "I don't know.", sources: [] });
     }
 
@@ -65,7 +107,6 @@ router.post("/", protect, async (req, res) => {
 
     results.forEach(r => {
       const key = `${r.filename}-${r.pageNumber}`;
-
       if (!sourceMap.has(key) || r.score > sourceMap.get(key).similarityScore) {
         sourceMap.set(key, {
           filename: r.filename,
@@ -120,7 +161,7 @@ ${question}
     await Conversation.create({
       question,
       answer,
-      confidence: avgScore,
+      confidence: results[0].score,
       sources: uniqueSources,
       user: req.user.id
     });
@@ -140,7 +181,7 @@ router.post("/stream", protect, async (req, res) => {
   try {
     const { question } = req.body;
 
-    if (!question || question.trim() === "") {
+    if (!question?.trim()) {
       return res.status(400).json({ error: "Question required" });
     }
 
@@ -148,13 +189,19 @@ router.post("/stream", protect, async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    const queryEmbedding = await generateEmbedding(question);
+    /* 🧠 STEP 1: Rewrite */
+    const standaloneQuestion = await rewriteQuestion(req.user.id, question);
+
+    /* ================= EMBEDDING ================= */
+    const queryEmbedding = await generateEmbedding(standaloneQuestion);
+
     if (!queryEmbedding) {
       res.write(`data: ${JSON.stringify({ chunk: "I don't know." })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, sources: [] })}\n\n`);
       return res.end();
     }
 
+    /* ================= VECTOR SEARCH ================= */
     const results = await Document.aggregate([
       {
         $vectorSearch: {
@@ -175,16 +222,7 @@ router.post("/stream", protect, async (req, res) => {
       }
     ]);
 
-    if (!results.length) {
-      res.write(`data: ${JSON.stringify({ chunk: "I don't know." })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, sources: [] })}\n\n`);
-      return res.end();
-    }
-
-    const avgScore =
-      results.reduce((sum, r) => sum + r.score, 0) / results.length;
-
-    if (avgScore < 0.72) {
+    if (!results.length || results[0].score < 0.72) {
       res.write(`data: ${JSON.stringify({ chunk: "I don't know." })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, sources: [] })}\n\n`);
       return res.end();
@@ -244,7 +282,7 @@ ${question}
     await Conversation.create({
       question,
       answer: fullAnswer,
-      confidence: avgScore,
+      confidence: results[0].score,
       sources: uniqueSources,
       user: req.user.id
     });
