@@ -38,7 +38,7 @@ export default function AdminAnalytics() {
         const token = localStorage.getItem("rag_token");
 
         const res = await fetch(
-          "http://localhost:5000/api/admin/analytics",
+          "https://opsmind-jzju.onrender.com/api/admin/analytics",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -81,7 +81,7 @@ export default function AdminAnalytics() {
       const token = localStorage.getItem("rag_token");
 
       const res = await fetch(
-        `http://localhost:5000/api/admin/user/${userId}`,
+        `https://opsmind-jzju.onrender.com/api/admin/user/${userId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

@@ -53,7 +53,7 @@ function Chat() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/upload",
+        "https://opsmind-jzju.onrender.com/api/upload",
         {
           method: "POST",
           headers: {
@@ -118,7 +118,7 @@ function Chat() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/chat/stream",
+        "https://opsmind-jzju.onrender.com/api/chat/stream",
         {
           method: "POST",
           headers: {
