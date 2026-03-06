@@ -23,6 +23,7 @@
     "multer": "^2.0.2",
     "nodemon": "^3.1.14",
     "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^5.4.624"
+    "pdfjs-dist": "^5.4.624",
+    "uuid": "^13.0.0"
   }
 }
