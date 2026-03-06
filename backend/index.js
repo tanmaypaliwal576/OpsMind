@@ -21,6 +21,10 @@ app.use(cors({
 }))
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("OpsMind API running");
+});
+
 app.use("/api/auth", authroutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/chat", chatRoutes);
