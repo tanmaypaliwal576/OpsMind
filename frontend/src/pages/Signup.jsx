@@ -94,9 +94,9 @@ return (
         transition={{ duration: 0.6 }}
         className="hidden lg:flex flex-col justify-center px-16 border-r border-white/10 bg-zinc-950"
       >
-        <h1 className="text-5xl font-bold mb-6">Build Your Workspace</h1>
+        <h1 className="text-5xl font-bold mb-6">Create Your AI Workspace</h1>
         <p className="text-gray-400 max-w-md">
-          Organize tasks, manage teams, and scale your productivity.
+          Sign up to upload documents, build your knowledge base, and ask AI questions powered by Retrieval-Augmented Generation.
         </p>
       </motion.div>
 

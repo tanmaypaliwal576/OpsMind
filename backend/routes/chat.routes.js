@@ -155,6 +155,7 @@ function balanceDocuments(results) {
 
 }
 
+//dont take everything from one chunk only.
 /* ============================= */
 /* STREAM CHAT */
 /* ============================= */
