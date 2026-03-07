@@ -71,9 +71,9 @@ export default function Login() {
         transition={{ duration: 0.6 }}
         className="hidden lg:flex flex-col justify-center px-16 border-r border-white/10 bg-zinc-950"
       >
-        <h1 className="text-5xl font-bold mb-6">Welcome to Your Dashboard</h1>
+        <h1 className="text-5xl font-bold mb-6">Welcome Back to OpsMind AI</h1>
         <p className="text-gray-400 max-w-md">
-          Pick up where you left off and stay in control of your work.
+          Search documents • Retrieve insights • Generate AI-powered answers
         </p>
       </motion.div>
 
